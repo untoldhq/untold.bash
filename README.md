@@ -6,6 +6,8 @@ After you've cloned this repository, edit `~/.bash_profile`, adding the followin
 
 ```source '/full/path/to/untold.bash/untold.bash.inc'```
 
+Save the file, then close and re-open your terminal for the changes to take effect.
+
 ##Commands
 There are lots of useful things in this profile, you should read through the whole thing, but here are a few that are especially useful: 
 
