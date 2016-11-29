@@ -18,6 +18,8 @@ alias ..="cd .."
 alias ...="cd ../.."
 alias ....="cd ../../.."
 alias .....="cd ../../../.."
+alias o="open ." #Open current directory in Finder
+
 # Shortcuts to my Code folder in my home directory
 alias sites="cd ~/Sites"
 alias docs="cd ~/Documents"
