@@ -6,6 +6,11 @@ After you've cloned this repository, edit `~/.bash_profile`, adding the followin
 
 ```source '/full/path/to/untold.bash/untold.bash.inc'```
 
+If you're doing iOS work too, you'll probably want to include 
+
+```source '/full/path/to/untold.bash/ios.bash.inc'```
+
+
 Save the file, then close and re-open your terminal for the changes to take effect.
 
 ##Commands

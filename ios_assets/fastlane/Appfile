@@ -1,0 +1,4 @@
+app_identifier "com.bell-labs.OneApp" # The bundle identifier of your app
+apple_id "ops+oneapp@hello-upswell.com" # Your Apple email address
+
+team_id "D94EDQW46T"  # Developer Portal Team ID

@@ -1,0 +1,49 @@
+# Sometimes it's a README fix, or something like that - which isn't relevant for
+# including in a project's CHANGELOG for example
+
+declared_trivial = github.pr_title.include? "#trivial"
+
+changelogs = (git.added_files + git.modified_files).select{ |path| path.include? "Changelogs/" }
+changelog_entries = changelogs.select{ |file| file.end_with? "md" }
+
+if changelog_entries.empty? && !declared_trivial
+  warn("Please include a CHANGELOG entry.")
+end
+
+# check for unit test coverage
+# check if there are any modified files in 'OneAppTests'
+unittestfiles = (git.added_files + git.modified_files).select{ |path| path.include? "OneAppTests/"}
+testfiles = unittestfiles.select{ |file| file.end_with? "swift"}
+
+pr_title_declared_nounittests = github.pr_title.include? "#nounittests"
+if !pr_title_declared_nounittests && testfiles.empty? && !declared_trivial
+        warn("No unit tests covered for this PR")
+end
+
+message("View this PR in an [iPhone 5s Simulator](#{ENV['IPHONE_5S_URL']})")
+message("View this PR in an [iPhone 6 Plus Simulator](#{ENV['IPHONE_6_PLUS_URL']})")
+message("View this PR in an [iPad Simulator](#{ENV['IPAD_URL']})")
+
+##### Catch print statements #####
+(git.modified_files + git.added_files - %w(Dangerfile)).each do |file|
+    next unless File.file?(file)
+#Search only swift files
+    if file.end_with?("swift")
+	file.each_line { |line|
+		#ignore line starts with //
+			if line !~ /^\s*\/\//
+        	
+			#ignore comments block
+        		if line =~ /^\s*\/\*/..line =~ /\*\//
+                		line.next
+
+        		#match only valid print
+        		else if line =~ /\bprint\b\s*\(/
+                		fail("FOUND valid print statement : #{line}")
+                		end
+        		end
+		end
+	}
+    end
+end
+

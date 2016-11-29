@@ -1,0 +1,235 @@
+# This is the minimum version number required.
+# Update this, if you use features of a newer version
+fastlane_version "1.111.0"
+
+default_platform :ios
+
+platform :ios do
+
+  def latestVersion
+    return most_recent
+  end
+
+  def versionNumber(version)
+    return version
+  end
+
+  def versionInfo(version)
+    version_number = versionNumber(version)
+    release_notes = ""
+    Dir.glob('../Changelogs/' + version_number + '/*.md') do |file|
+
+      fp = File.open(file, "rb")
+      release_notes = release_notes + fp.read
+      fp.close
+    end
+    return version_number, release_notes
+  end
+
+  # Commit the major version to CHANGELOG bump and push to master
+  def bumpChangelogVersion
+    version = versionNumber(most_recent).split(".")
+    major_version = version[0].to_i
+    minor_version = version[1].to_i
+
+    changelog = '../CHANGELOG.md'
+    new_changelog = changelog + '.new'
+
+    new_version = major_version.to_s + "." + (minor_version + 1).to_s
+    Dir.mkdir '../Changelogs/' + new_version
+    sh "touch ../Changelogs/" + new_version + "/.keep"
+    version_bump_text = "## " + new_version + "\n" + "Automatically starting the next sprint, no changes just yet (Replace this line when changes are merged in)  " + "\n\n"
+
+    ensure_git_branch(branch: "master")
+    git_add(path: "Changelogs/" + new_version + "/.keep")
+    git_commit(path: ["Changelogs/" + new_version + "/.keep"], message: "Automatically bumping CHANGELOG version via fastlane")
+    push_to_git_remote(tags: false)
+  end
+
+  before_all do
+
+  end
+
+  desc "Runs all the tests"
+  lane :test do
+    scan
+  end
+
+  desc "Runs various pre-build tasks"
+  lane :prebuild do
+    sh "bundle install --path vendor/bundle"
+    # ensure_git_status_clean
+    ensure_xcode_version(version: "8.0")
+    pods
+  end
+
+  desc "Submit a new Beta Build to Apple TestFlight"
+  desc "This will also make sure the profile is up to date"
+  lane :tf do
+    prebuild
+    # Set version number to the one at the top of the CHANGELOG
+    version_number, release_notes = versionInfo(latestVersion())
+    increment_version_number(version_number: version_number)
+    increment_build_number
+    gym(scheme: "OneApp")
+    pilot
+  end
+
+  def most_recent
+    directory = '../Changelogs'
+    directories = Dir.entries(directory).select { |file| File.directory? File.join(directory, file) and !(file =='.' || file == '..') }
+    return directories.last
+  end
+
+  desc "Add a new note to the changelog"
+  desc "Usage: fastlane changelog log:\"My changelog notes\""
+  lane :changelog do |options|
+    log = options[:log]
+    version = most_recent
+    max = 12 # truncate long messages
+    shortfile = log.length > max ? "#{log[0...max]}..." : log
+    file = Time.now.to_i.to_s + "-" + shortfile.downcase.tr(" ", "_") + ".md"
+    File.open("../Changelogs/" + most_recent + "/" + file , 'w') { |file| file.write("* " + log + "\n") }
+  end
+
+  desc "Exactly the same as the tf lane, but runs the setup_jenkins action beforehand"
+  lane :ci_testflight do
+    setup_jenkins
+    tf
+  end
+
+  desc "Builds a nightly build and uploads it to Hockey"
+  lane :nightly do
+    ENV['HockeyAppIdentifier'] = "710e5bf8b09847929b78d05f8f1f8c7f"
+    prebuild
+    match(type: "adhoc", app_identifier: "com.bell-labs.OneApp", readonly: true, verbose: true)
+    # Set version number to the one at the top of the CHANGELOG
+    version_number, release_notes = versionInfo(latestVersion())
+    increment_version_number(version_number: version_number)
+    # nightly builds will ignore the traditional build numbers, and instead just use the current date
+    build_number = Time.new.strftime("%Y.%m.%d")
+    increment_build_number(build_number: build_number)
+    # scan(scheme: "OneApp") # Commenting this line out until we address OAC-1263
+    gym(scheme: "OneApp", configuration: "Beta", output_name: "hockey", use_legacy_build_api: true, toolchain: "com.apple.dt.toolchain.Swift_2_3")
+
+    hockey(
+      api_token: ENV['HOCKEY_API_TOKEN'],
+      public_identifier: ENV['HOCKEY_NIGHTLY_IDENTIFIER'],
+      notes_type: "1",
+      notes: release_notes,
+    )
+  end
+
+  desc "Release a build a stable build"
+  lane :release do
+    commit = last_git_commit
+    message = commit[:message]
+    ignored_auto = message == "Automatically bumping version via fastlane\n"
+    ignored_newsprint = message == "Automatically bumping CHANGELOG version via fastlane\n"
+
+    if !ignored_auto && !ignored_newsprint
+      ENV['HockeyAppIdentifier'] = "3be32867ca474b59ba352bd850a54e54"
+      prebuild
+      match(type: "adhoc", app_identifier: "com.bell-labs.OneApp", readonly: true, verbose: true)
+      # Set version number to the one at the top of the CHANGELOG
+      version_number, release_notes = versionInfo(latestVersion())
+      increment_version_number(version_number: version_number)
+      increment_build_number
+
+      commitbump
+      gym(scheme: "OneApp", configuration: "Beta", output_name: "hockey_release", use_legacy_build_api: true, toolchain: "com.apple.dt.toolchain.Swift_2_3")
+
+      hockey(
+        api_token: ENV['HOCKEY_API_TOKEN'],
+        public_identifier: ENV['HOCKEY_MASTER_IDENTIFIER'],
+        notes_type: "1",
+        notes: release_notes,
+      )
+      sh "git push fxlabs master"
+    end
+  end
+
+  desc "Register the given device in the developer portal"
+  desc "Syntax: fastlane register device:\"device UDID\" name:\"Device Name\""
+  lane :register do |options|
+    register_devices(devices: {
+      options[:name] => options[:device]
+      })
+    force_certificates
+  end
+
+  desc "Bump the build number"
+  lane :bump do
+    increment_build_number
+  end
+
+  desc "Commit the version bump and push to master"
+  lane :commitbump do
+    ensure_git_branch(branch: "master")
+    git_add(path: "OneApp.xcodeproj/project.pbxproj")
+    git_add(path: "OneApp/Info.plist")
+    git_add(path: "OneAppTests/Info.plist")
+    git_commit(path: ["OneApp.xcodeproj/project.pbxproj", "OneApp/Info.plist", "OneAppTests/Info.plist"], message: "Automatically bumping version via fastlane")
+    push_to_git_remote(tags: false)
+  end
+
+  desc "Start up a new sprint"
+  lane :newsprint do
+    bumpChangelogVersion()
+  end
+
+  desc "Pull provisioning profiles & certificates"
+  lane :certificates do
+    match(type: "development", app_identifier: "com.bell-labs.OneApp", readonly: true, verbose: true)
+    match(type: "adhoc", app_identifier: "com.bell-labs.OneApp", readonly: true, verbose: true)
+    match(type: "appstore", app_identifier: "com.bell-labs.OneApp", readonly: true, verbose: true)
+  end
+
+  desc "Generate or pull provisioning profiles & certificates"
+  lane :force_certificates do
+    match(type: "development", app_identifier: "com.bell-labs.OneApp", readonly: false, force_for_new_devices: true)
+    match(type: "adhoc", app_identifier: "com.bell-labs.OneApp", readonly: false, force_for_new_devices: true)
+    match(type: "appstore", app_identifier: "com.bell-labs.OneApp", readonly: false)
+    slack(
+        message: "Provisioning Profiles or Certificates updated, run `fastlane certificates` on your local machine to get the latest copies.",
+      )
+  end
+
+  desc "Archive"
+  lane :archive do
+    bump
+    gym(scheme: "OneApp", export_method: "ad-hoc")
+  end
+
+  desc "Install cocoapods via bundler"
+  lane :pods do
+    cocoapods(use_bundle_exec: true)
+  end
+
+  desc "Evaluates a github pull request"
+  lane :pr do
+    sh "cd .. && xcodebuild -workspace $(PWD)/OneApp.xcworkspace -scheme OneApp -sdk iphonesimulator OBJROOT=$(PWD)/build SYMROOT=$(PWD)/build"
+    zipped_bundle = zip(path: "./build/Debug-iphonesimulator/OneApp.app", output_path: "OneApp.zip")
+    appetize(path: "./build/Debug-iphonesimulator/OneApp.zip", api_token: "tok_0enuvj62bv4jr9vnp0dqntdd38")
+    build_key = lane_context[SharedValues::APPETIZE_PUBLIC_KEY]
+    ENV['IPHONE_5S_URL'] = appetize_viewing_url_generator(scale: "75", color: "black", public_key: build_key, device: "iphone5s") + "&osVersion=10.0"
+    ENV['IPHONE_6_PLUS_URL'] = appetize_viewing_url_generator(scale: "75", color: "black", public_key: build_key, device: "iphone6splus") + "&osVersion=10.0"
+    ENV['IPAD_URL'] = appetize_viewing_url_generator(scale: "50", color: "black", public_key: build_key, device: "ipadair2") + "&osVersion=10.0"
+    ENV['DANGER_GITHUB_API_TOKEN']= "f082f206b8cb0ca9562a8e1d505653b5b286a03e"
+    sh "cd .. && bundle exec danger"
+  end
+
+  # You can define as many lanes as you want
+
+  after_all do |lane|
+    # This block is called, only if the executed lane was successful
+
+  end
+
+  error do |lane, exception|
+    # slack(
+    #   message: exception.message,
+    #   success: false
+    # )
+  end
+end

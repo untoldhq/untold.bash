@@ -9,7 +9,6 @@ alias l="ls -lF ${colorflag}" # all files, in long format
 alias la="ls -laF ${colorflag}" # all files inc dotfiles, in long format
 alias lsd='ls -lF ${colorflag} | grep "^d"' # only directories
 alias be="bundle exec"
-alias bef="bundle exec fastlane"
 alias bi="bundle install"
 #Run bundle install locally to this directory
 alias bil="bundle install --path vendor/bundle"
