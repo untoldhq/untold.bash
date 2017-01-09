@@ -1,3 +1,6 @@
+# A variable pointing to the directory from which untold.bash is being imported
+source_dir=$(dirname $BASH_SOURCE)
+
 ### Aliases
 # Open specified files in Sublime Text
 # "s ." will open the current directory in Sublime
@@ -108,3 +111,13 @@ export ANDROID_HOME=/Users/sam/Library/Android/sdk
 export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 export PATH="$HOME/.composer/vendor/bin:$PATH"
 #PATH=${PATH}:/usr/local/mysql/bin
+
+### Check for latest version
+cd $source_dir
+git remote update >> /dev/null
+output=$(git status -uno | grep up-to-date)
+if [ -z "$output" ]
+then
+echo "⚠️   ${BOLD}${BRAND}Your untold.bash is out of date.$RESET   ⚠️"
+fi
+cd ~
