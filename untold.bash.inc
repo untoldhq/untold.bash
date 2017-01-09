@@ -112,6 +112,51 @@ export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 export PATH="$HOME/.composer/vendor/bin:$PATH"
 #PATH=${PATH}:/usr/local/mysql/bin
 
+create_db() {
+  if [ -z "$1" ]                           # Is parameter #1 zero length?
+  then
+      echo "Usage: create_db database-name"  # Or no parameter passed.
+      return -1
+  fi
+  database=$1
+  echo "create database $database" | mysql -u root
+}
+
+untold_drush_aliases() {
+    project=$(basename `pwd`)
+    user=$(whoami)
+    assets="$source_dir/web_assets"
+    echo "This will create ${BOLD}${BRAND}~/.drush/$project.aliases.drushrc.php${RESET} with the following contents:"
+    cp $assets/template.aliases.drushrc.php /tmp/$project.aliases.drushrc.php
+    sed -i '' "s/<PROJECT>/$project/g" /tmp/$project.aliases.drushrc.php
+    sed -i '' "s/<USER>/$user/g" /tmp/$project.aliases.drushrc.php
+    cat /tmp/$project.aliases.drushrc.php
+    reset=$(us_yn_prompt "Would you like to continue?")
+    echo ""
+
+    if [ "$reset" == "1" ]
+    then
+        mkdir -p ~/.drush
+        cp /tmp/$project.aliases.drushrc.php ~/.drush/$project.aliases.drushrc.php
+    fi
+
+}
+
+# Creates a yes/no prompt and prints a 1 if the user chooses yes, otherwise prints a 0
+us_yn_prompt() {
+  if [ -z "$1" ]                          
+  then
+      echo "Usage: us_yn_prompt \"A question to display to the user\""
+      return -1
+  fi
+  read -p "$1 [y/n] " -n 1 -r
+  if [[ $REPLY =~ ^[Yy]$ ]]
+  then
+      echo "1"
+      return 0
+  fi
+  echo "0"
+}
 ### Check for latest version
 cd $source_dir
 git remote update >> /dev/null

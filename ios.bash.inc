@@ -72,21 +72,6 @@ ios() {
   return 0
 }
 
-us_yn_prompt() {
-  if [ -z "$1" ]                          
-  then
-      echo "Usage: us_yn_prompt \"A question to display to the user\""
-      return -1
-  fi
-  read -p "$1 [y/n] " -n 1 -r
-  if [[ $REPLY =~ ^[Yy]$ ]]
-  then
-      echo "1"
-      return 0
-  fi
-  echo "0"
-}
-
 ios_reset() {
   project=$(ls | grep xcodeproj)
 
