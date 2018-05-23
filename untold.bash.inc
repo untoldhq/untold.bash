@@ -107,7 +107,7 @@ export PROMPT_COMMAND='echo -ne "\033]0;${PWD##*/}\007"'
 # source ~/.profile
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm"
  # Load RVM function
-export ANDROID_HOME=/Users/sam/Library/Android/sdk
+export ANDROID_HOME=/Users/$(whoami)/Library/Android/sdk
 export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 export PATH="$HOME/.composer/vendor/bin:$PATH"
 #PATH=${PATH}:/usr/local/mysql/bin
