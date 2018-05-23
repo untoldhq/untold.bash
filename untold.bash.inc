@@ -160,7 +160,7 @@ us_yn_prompt() {
 ### Check for latest version
 cd $source_dir
 git remote update >> /dev/null
-output=$(git status -uno | grep up-to-date)
+output=$(git status -uno | grep up\ to\ date)
 if [ -z "$output" ]
 then
 echo "⚠️   ${BOLD}${BRAND}Your untold.bash is out of date.$RESET   ⚠️"
