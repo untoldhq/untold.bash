@@ -15,6 +15,7 @@ alias be="bundle exec"
 alias bi="bundle install"
 alias phart="php artisan"
 alias pa="phart"
+alias cropdust="phart migrate:refresh --seed"
 #Run bundle install locally to this directory
 alias bil="bundle install --path vendor/bundle"
 
