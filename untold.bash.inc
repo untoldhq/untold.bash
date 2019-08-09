@@ -13,6 +13,8 @@ alias la="ls -laF ${colorflag}" # all files inc dotfiles, in long format
 alias lsd='ls -lF ${colorflag} | grep "^d"' # only directories
 alias be="bundle exec"
 alias bi="bundle install"
+alias phart="php artisan"
+alias pa="phart"
 #Run bundle install locally to this directory
 alias bil="bundle install --path vendor/bundle"
 
@@ -95,7 +97,7 @@ function parse_git_branch() {
 }
 # Change this symbol to something sweet.
 # (http://en.wikipedia.org/wiki/Unicode_symbols)
-symbol="⚡ "
+symbol="⚡️ "
 export PS1="\[$BOLD\]\[$BRAND\]\w\[$WHITE\]\$([[ -n \$(git branch 2> /dev/null) ]] && echo \" on \")\[$PURPLE\]\$(parse_git_branch)\[$WHITE\]\n$symbol\[$RESET\]"
 export PS2="\[$ORANGE\]→ \[$RESET\]"
 ### Misc
